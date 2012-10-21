@@ -1,3 +1,5 @@
+# loosely based on http://stackoverflow.com/questions/3085153/how-to-parse-the-manifest-mbdb-file-in-an-ios-4-0-itunes-backup
+
 
 import sys
 import hashlib
@@ -24,7 +26,6 @@ def filesize(filepath):
     return size
 
 def getint(data, offset, intsize):
-    """Retrieve an integer (big-endian) and new offset from the current offset"""
     value = 0
     while intsize > 0:
         value = (value<<8) + ord(data[offset])
@@ -33,7 +34,6 @@ def getint(data, offset, intsize):
     return value, offset
 
 def getstring(data, offset):
-    """Retrieve a string and new offset from the current offset into the data"""
     if data[offset] == chr(0xFF) and data[offset+1] == chr(0xFF):
         return '', offset+2 # Blank string
     length, offset = getint(data, offset, 2) # 2-byte length
