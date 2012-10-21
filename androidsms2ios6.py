@@ -213,6 +213,15 @@ def get_handle(db, address, uncanonical_address):
         
     return handle
 
+def get_chat_from_handle(db, handle_id):
+    
+    db.execute('select ROWID from chat_handle_join where handle_id = ?', (handle_id,))
+    res = db.fetchone()
+        
+    chat_id = res[0]
+    
+    return chat_id
+    
 
 def get_chat(db, address, account_guid, account_login):
         
@@ -273,14 +282,15 @@ def join_chat_message(db, chat_id, msg_id):
                 (chat_id, msg_id))
 
 #3d0d7e5fb2ce288813306e4d4636395e047a3d28
-shutil.copy2('ios_org.db', 'ios_new.db')
+shutil.copy2('/home/martin/phone/ios_org.db', '/home/martin/phone/ios_new.db')
  
-androidDb = sqlite3.connect('android.db')
+androidDb = sqlite3.connect('/home/martin/phone/android.db')
 androidDb.row_factory = sqlite3.Row
 android = androidDb.cursor()
 
-iosDb = sqlite3.connect('ios_new.db')
+iosDb = sqlite3.connect('/home/martin/phone/ios_new.db')
 iosDb.isolation_level = None
+iosDb.row_factory = sqlite3.Row
 ios = iosDb.cursor()
 
 # delete old messages
@@ -291,7 +301,7 @@ ios.execute('delete from chat_handle_join')
 ios.execute('delete from chat_message_join')
 ios.execute('update sqlite_sequence set seq=0 where name in ("handle", "chat", "message")')
 
-iosDbOrg = sqlite3.connect('ios_org.db')
+iosDbOrg = sqlite3.connect('/home/martin/phone/ios_org.db')
 iosDbOrg.row_factory = sqlite3.Row
 iosOrg = iosDbOrg.cursor()
 
@@ -378,9 +388,22 @@ for msg in msgs:
     # insert msg
     msg_id = copy_ios_msg(ios, msg, handle)
     
-    # join chat and message
-    join_chat_message(ios, chat_id, msg_id)
 
+#sort database - this is a silly way of doing this
+#rejoin chats
+
+ios.execute('select * from message order by date asc')
+msgs = ios.fetchall()
+
+ios.execute('delete from message')
+ios.execute('delete from chat_message_join')
+ios.execute('update sqlite_sequence set seq=0 where name in ("message")')
+
+for msg in msgs:
+
+    msg_id = copy_ios_msg(ios, msg, msg['handle_id'])
+    chat_id = get_chat_from_handle(ios, msg['handle_id'])
+    join_chat_message(ios, chat_id, msg_id)
 
 #close dbs
 ios.close()
